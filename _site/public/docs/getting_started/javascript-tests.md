@@ -34,6 +34,7 @@ File: `./test/metacoin.js`
 var MetaCoin = artifacts.require("MetaCoin");
 
 contract('MetaCoin', function(accounts) {
+  
   it("should put 10000 MetaCoin in the first account", function() {
     return MetaCoin.deployed().then(function(instance) {
       return instance.getBalance.call(accounts[0]);
@@ -41,39 +42,48 @@ contract('MetaCoin', function(accounts) {
       assert.equal(balance.valueOf(), 10000, "10000 wasn't in the first account");
     });
   });
-  it("should send coin correctly", function() {
-    var meta;
 
-    // Get initial balances of first and second account.
-    var account_one = accounts[0];
-    var account_two = accounts[1];
+  context('Balance is transferrable', function () {
+    const account_one = accounts[0];
+    const account_two = accounts[1];
+    const amount = 10;
 
-    var account_one_starting_balance;
-    var account_two_starting_balance;
-    var account_one_ending_balance;
-    var account_two_ending_balance;
+    let account_one_starting_balance;
+    let account_two_starting_balance;
+    let account_one_ending_balance;
+    let account_two_ending_balance;
 
-    var amount = 10;
+    before(function () {
+      return MetaCoin
+        .deployed()
+        .then(function (instance) {
+          return Promise.all([
+            meta.getBalance.call(account_one),
+            meta.getBalance.call(account_two),
+            meta.sendCoin(account_two, amount, {from: account_one})
+          ])
+        }).then(function (balances) {
+          account_one_starting_balance = balances[0].toNumber();
+          account_two_starting_balance = balances[1].toNumber();
+          return Promise.all([
+            meta.getBalance.call(account_one),
+            meta.getBalance.call(account_two)
+          ])
+        })
+        .then(function (balances) {
+          account_one_ending_balance = balances[0].toNumber();
+          account_two_ending_balance = balances[1].toNumber();
+        });
+    });
 
-    return MetaCoin.deployed().then(function(instance) {
-      meta = instance;
-      return meta.getBalance.call(account_one);
-    }).then(function(balance) {
-      account_one_starting_balance = balance.toNumber();
-      return meta.getBalance.call(account_two);
-    }).then(function(balance) {
-      account_two_starting_balance = balance.toNumber();
-      return meta.sendCoin(account_two, amount, {from: account_one});
-    }).then(function() {
-      return meta.getBalance.call(account_one);
-    }).then(function(balance) {
-      account_one_ending_balance = balance.toNumber();
-      return meta.getBalance.call(account_two);
-    }).then(function(balance) {
-      account_two_ending_balance = balance.toNumber();
+    it('should have taken amount from sender', function () {
+      const expected_balance = account_one_starting_balance - amount;
+      assert.equal(account_one_ending_balance, expected_balance);
+    });
 
-      assert.equal(account_one_ending_balance, account_one_starting_balance - amount, "Amount wasn't correctly taken from the sender");
-      assert.equal(account_two_ending_balance, account_two_starting_balance + amount, "Amount wasn't correctly sent to the receiver");
+    it('reciever should have gained amount', function () {
+      const expected_balance = account_two_starting_balance + amount
+      assert.equal(account_two_ending_balance, expected_balance);
     });
   });
 });
@@ -86,9 +96,11 @@ Using network 'development'.
 
   Contract: MetaCoin
     ✓ should put 10000 MetaCoin in the first account
-    ✓ should send coin correctly
+    Balance is transferrable
+      ✓ should have taken amount from sender
+      ✓ reciever should have gained amount
 
-  2 passing (113ms)
+  3 passing (113ms)
 ```
 
 # Advanced
