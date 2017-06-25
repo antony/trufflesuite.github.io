@@ -35,7 +35,7 @@ var MetaCoin = artifacts.require("MetaCoin");
 
 contract('MetaCoin', function(accounts) {
   
-  it("should put 10000 MetaCoin in the first account", function() {
+  it("should put 10000 MetaCoin in the first account", function () {
     return MetaCoin.deployed().then(function(instance) {
       return instance.getBalance.call(accounts[0]);
     }).then(function(balance) {
@@ -56,15 +56,17 @@ contract('MetaCoin', function(accounts) {
     before(function () {
       return MetaCoin
         .deployed()
-        .then(function (instance) {
+        .then(function (meta) {
           return Promise.all([
+            meta,
             meta.getBalance.call(account_one),
             meta.getBalance.call(account_two),
             meta.sendCoin(account_two, amount, {from: account_one})
           ])
-        }).then(function (balances) {
-          account_one_starting_balance = balances[0].toNumber();
-          account_two_starting_balance = balances[1].toNumber();
+        }).then(function (results) {
+          const meta = results[0];
+          account_one_starting_balance = results[1].toNumber();
+          account_two_starting_balance = results[2].toNumber();
           return Promise.all([
             meta.getBalance.call(account_one),
             meta.getBalance.call(account_two)
